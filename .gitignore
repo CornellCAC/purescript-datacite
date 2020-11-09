@@ -1,0 +1,16 @@
+.DS_Store
+npm-debug.log
+node_modules/
+bower_components/
+tmp/
+output/
+prod/
+html/index.js
+/.psc-package
+/.cache
+/dist
+/.spago
+
+# Container files
+.xdg_config_home
+dev_container.cid
