@@ -1,49 +1,34 @@
-# Purescript Concur Adventure
+# Purescript DataCite
 
-A starter kit for making choose-your-own-adventure experiences
-with PureScript-Concur. These experiences could be games or simple
-stories. The [current demo](https://bbarker.github.io/purescript-concur-adventure/) is relatively simple, though it does use
-markup instead of plain text.
-
-Uses Npm, Spago, Google Closure Compiler, and Parcel. Builds tiny 180KB uncompressed bundles!
+PureScript types for representing and reading DatCite (currently JSON only)
+records.
 
 ## Usage
 
-The experiences are optionally path-dependent, as the `nextPage` can depend
-on an `Array n` of past events of type `n`. Additionally, they can
-depend on data of type `d`, if it exists.
-
-Other than implementing instances of `StoryPage`, the user may want
-change the `runPage` function to configure how subsequent pages
-are displayed (e.g. how many, what order, etc); currently the
-default is to show the complete history, starting with the most
-recent page first.
-
-### Grab the code
-
-This is a template repository, so just click the "Use this template"
-button above.
 
 ### Build code
 
 > npm install
 
-> npm run dev
+> npm run build
 
-### Run Dev Server
+## Run Tests
 
-> npm start
+Tests use static copies of data obtained from DataCite, so they
+should periodically be checked against DataCite in case of a
+Schema update.
 
-## Hot code reload with PureScript code
+## Generate Draft Haskell datatypes
 
-At the end of the previous command, you will have a development server
-which will watch for changes, and automatically reload the web page.
-This mechanism only works with JS changes.
+As I'm unaware of any utility to generate PureScript types
+from XML schemas, we'll use a relatively similar language output
+(Haskell). The Haskell type can then be manually converted to PureScript.
+We have committed the XML schema and generated Haskell code so that
+diffs of future schema versions may be readily obtained when
+updating the PureScript datatypes. Also of note, it is important to
+be aware of [some differences](https://blog.datacite.org/introducing-datacite-json/)
+between DataCite JSON and XML.
 
-However, in practice, your IDE should automatically recompile PureScript to
-Javascript on every change, which will be picked up by the development server.
-So you get immediate recompilation even with PureScript.
+### Publish
 
-### Build production artifacts
-
-> npm run prod
+> TODO
