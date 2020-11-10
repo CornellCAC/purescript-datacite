@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Tools for working with DataCite in PureScript.",
   "scripts": {
-    "test": "spago test",
+    "test": "spago -x test.dhall test",
     "clean": "rimraf .cache .spago .psci_modules output .pulp-cache prod dist",
     "build": "spago build"
   },
