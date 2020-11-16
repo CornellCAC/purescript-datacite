@@ -1,8 +1,7 @@
 module DataCite.Types where
-  
-import Prelude
 
 import Data.Array.NonEmpty (NonEmptyArray)
+import Data.Maybe (Maybe)
 import Data.String.NonEmpty (NonEmptyString)
 
 type ResourceRows = (
@@ -68,7 +67,10 @@ type AlternateIdentifier = Record AlternateIdentifierRows
 
 -- TODO: incomplete
 type CreatorRows = (
-  name :: String
+  name :: NonEmptyString
+, nameType :: Maybe NonEmptyString
+, givenName :: Maybe NonEmptyString
+, familyName :: Maybe NonEmptyString
 --, `type` :: String
 )
 

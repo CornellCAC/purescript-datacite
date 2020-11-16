@@ -1,17 +1,18 @@
 module DataCite.JSON.Decode.Simple where
 
-import Data.Array.NonEmpty (NonEmptyArray, fromArray)
-import Data.Lazy (Lazy, force)
-import DataCite.JSON.Util (tryPrettyJson)
 import Control.Monad.Except (except, runExcept)
+import Data.Array.NonEmpty (NonEmptyArray, fromArray)
 import Data.Either (Either(..))
+import Data.Lazy (Lazy, force)
 import Data.Maybe (Maybe(..))
 import Data.Semigroup ((<>))
 import Data.String.NonEmpty (NonEmptyString, fromString)
+import Data.Traversable (traverse, traverse_)
+import DataCite.JSON.Util (tryPrettyJson)
 import DataCite.Types (Resource)
 import Foreign (F, Foreign)
 import Foreign as Foreign
-import Prelude (bind, pure, ($))
+import Prelude (bind, pure, ($), (<$>), (>>=))
 import Simple.JSON as JSON
 
 -- TODO: make an optional preparser to remove fields that are definitely unused,
@@ -26,7 +27,8 @@ readRecordJSON jsStr = runExcept do
   doi <- readNEStringImpl ctxt recBase.data.attributes.doi
   doiPfx <- readNEStringImpl ctxt recBase.data.attributes.prefix
   doiSfx <- readNEStringImpl ctxt recBase.data.attributes.suffix
-  creators <- readNEArrayImpl ctxt recBase.data.attributes.creators
+  creatorsIn <- readNEArrayImpl ctxt recBase.data.attributes.creators
+  creators <- mkCreators creatorsIn
   pure $ recBase { "data" {
       id = resId
     , "type" = idType
@@ -39,6 +41,15 @@ readRecordJSON jsStr = runExcept do
     }}
   where
     ctxt = tryPrettyJson jsStr
+    mkCreators ctors = traverse (\ctr -> do
+      nameNE <- readNEStringImpl ctxt {- TODO: narrow ctxt -} ctr.name
+      pure $ ctr {
+          name = nameNE
+        , nameType = ctr.nameType >>= fromString
+        , givenName = ctr.givenName >>= fromString
+        , familyName = ctr.familyName >>= fromString
+        }
+      ) ctors
 
 readNEStringImpl :: Lazy String -> Foreign -> F NonEmptyString
 readNEStringImpl ctxt f = do
