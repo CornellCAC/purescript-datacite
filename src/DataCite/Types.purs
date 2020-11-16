@@ -1,6 +1,8 @@
 module DataCite.Types where
   
 import Prelude
+
+import Data.Array.NonEmpty (NonEmptyArray)
 import Data.String.NonEmpty (NonEmptyString)
 
 type ResourceRows = (
@@ -12,7 +14,9 @@ type Resource = Record ResourceRows
 type DataRows = (
   id :: NonEmptyString
   -- ^ A persistent identifier that identifies a resource.
+, "type" :: NonEmptyString
 , attributes :: Attributes
+, relationships :: Relationships
 {- , resource_titles :: Titles
 , resource_publisher :: Publisher
 , resource_publicationYear :: YearType
@@ -38,10 +42,29 @@ type DataRows = (
 type Data = Record DataRows
 
 type AttributesRows = (
-  creators :: Array Creator
+  doi :: NonEmptyString
+, prefix :: NonEmptyString
+, suffix :: NonEmptyString
+, identifiers :: Array Identifier
+, alternateIdentifiers :: Array AlternateIdentifier
+, creators :: NonEmptyArray Creator
 )
 
+-- | Combines the Identifier and AlternateIdentifier properties from XML.
 type Attributes = Record AttributesRows
+
+-- TODO Not entirely sure about how this relates to doi
+type IdentifierRows = (
+  identifier :: String
+, identifierType :: String
+)
+type Identifier = Record IdentifierRows
+
+type AlternateIdentifierRows = (
+  alternateIdentifier :: String
+, alternateIdentifierType :: String
+)
+type AlternateIdentifier = Record AlternateIdentifierRows
 
 -- TODO: incomplete
 type CreatorRows = (
@@ -51,6 +74,11 @@ type CreatorRows = (
 
 type Creator = Record CreatorRows
 
+
+type RelationshipsRows = (
+)
+
+type Relationships = Record RelationshipsRows
 
 
 {- 
