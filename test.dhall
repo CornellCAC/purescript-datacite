@@ -5,6 +5,12 @@ let conf = ./spago.dhall
 in conf // { 
   sources = conf.sources # [ "test/**/*.purs" ]
 , name = "purescript-datacite-tests"
-, dependencies = conf.dependencies # [ "console", "node-process" ]
+, dependencies = conf.dependencies # [
+    "console"
+  , "node-fs"
+  , "node-process"
+  , "stringutils"
+  , "test-unit"
+  ]
 , packages = ./packages.dhall
 }
