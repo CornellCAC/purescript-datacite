@@ -20,10 +20,10 @@ import Simple.JSON as JSON
 readRecordJSON :: String -> Either Foreign.MultipleErrors Resource
 readRecordJSON jsStr = runExcept do
   recBase <- JSON.readJSON' jsStr
-  resId <- readNEStringImpl ctxt recBase.resource_identifier
-  pure $ recBase {
-      resource_identifier = resId
-    }
+  resId <- readNEStringImpl ctxt recBase.data.id
+  pure $ recBase { "data" {
+      id = resId
+    }}
   where
     ctxt = tryPrettyJson jsStr
 

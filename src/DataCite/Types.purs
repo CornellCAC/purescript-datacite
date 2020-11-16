@@ -4,9 +4,15 @@ import Prelude
 import Data.String.NonEmpty (NonEmptyString)
 
 type ResourceRows = (
-  resource_identifier :: NonEmptyString
+  data :: Data
+)
+
+type Resource = Record ResourceRows
+
+type DataRows = (
+  id :: NonEmptyString
   -- ^ A persistent identifier that identifies a resource.
-, resource_creators :: Array Creator
+, attributes :: Attributes
 {- , resource_titles :: Titles
 , resource_publisher :: Publisher
 , resource_publicationYear :: YearType
@@ -29,15 +35,22 @@ type ResourceRows = (
 , resource_fundingReferences :: Maybe FundingReferences -}
 )
 
-type Resource = Record ResourceRows
+type Data = Record DataRows
+
+type AttributesRows = (
+  creators :: Array Creator
+)
+
+type Attributes = Record AttributesRows
 
 -- TODO: incomplete
 type CreatorRows = (
-  creatorName :: String
-, nameType :: String
+  name :: String
+--, `type` :: String
 )
 
 type Creator = Record CreatorRows
+
 
 
 {- 
