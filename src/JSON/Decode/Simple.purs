@@ -7,7 +7,7 @@ import Data.Lazy (Lazy, force)
 import Data.Maybe (Maybe(..))
 import Data.Semigroup ((<>))
 import Data.String.NonEmpty (NonEmptyString, fromString)
-import Data.Traversable (traverse, traverse_)
+import Data.Traversable (traverse)
 import DataCite.JSON.Util (tryPrettyJson)
 import DataCite.Types (Resource)
 import Foreign (F, Foreign)
@@ -42,12 +42,14 @@ readRecordJSON jsStr = runExcept do
   where
     ctxt = tryPrettyJson jsStr
     mkCreators ctors = traverse (\ctr -> do
-      nameNE <- readNEStringImpl ctxt {- TODO: narrow ctxt -} ctr.name
+      nameNE <- readNEStringImpl ctxt ctr.name
+      affilsNE <- traverse (readNEStringImpl ctxt) ctr.affiliation
       pure $ ctr {
           name = nameNE
         , nameType = ctr.nameType >>= fromString
         , givenName = ctr.givenName >>= fromString
         , familyName = ctr.familyName >>= fromString
+        , affiliation = affilsNE
         }
       ) ctors
 

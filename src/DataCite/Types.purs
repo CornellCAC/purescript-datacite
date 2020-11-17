@@ -71,7 +71,8 @@ type CreatorRows = (
 , nameType :: Maybe NonEmptyString
 , givenName :: Maybe NonEmptyString
 , familyName :: Maybe NonEmptyString
---, `type` :: String
+, affiliation :: Array NonEmptyString
+-- TODO: nameIdentifiers , e.g. 10.5281/zenodo.4072428
 )
 
 type Creator = Record CreatorRows
