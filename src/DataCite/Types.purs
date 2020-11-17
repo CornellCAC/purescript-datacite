@@ -16,8 +16,8 @@ type DataRows = (
 , "type" :: NonEmptyString
 , attributes :: Attributes
 , relationships :: Relationships
-{- , resource_titles :: Titles
-, resource_publisher :: Publisher
+
+{-, resource_publisher :: Publisher
 , resource_publicationYear :: YearType
 , resource_resourceType :: ResourceType
 , resource_subjects :: Maybe Subjects
@@ -47,6 +47,7 @@ type AttributesRows = (
 , identifiers :: Array Identifier
 , alternateIdentifiers :: Array AlternateIdentifier
 , creators :: NonEmptyArray Creator
+, titles :: NonEmptyArray Title
 )
 
 -- | Combines the Identifier and AlternateIdentifier properties from XML.
@@ -65,7 +66,6 @@ type AlternateIdentifierRows = (
 )
 type AlternateIdentifier = Record AlternateIdentifierRows
 
--- TODO: incomplete
 type CreatorRows = (
   name :: NonEmptyString
 , nameType :: Maybe NonEmptyString
@@ -77,6 +77,12 @@ type CreatorRows = (
 
 type Creator = Record CreatorRows
 
+type TitleRows = (
+  title :: String
+  -- TODO: titleType
+)
+
+type Title = Record TitleRows
 
 type RelationshipsRows = (
 )

@@ -9,7 +9,7 @@ import Data.Semigroup ((<>))
 import Data.String.NonEmpty (NonEmptyString, fromString)
 import Data.Traversable (traverse)
 import DataCite.JSON.Util (tryPrettyJson)
-import DataCite.Types (Resource)
+import DataCite.Types (Resource, Title)
 import Foreign (F, Foreign)
 import Foreign as Foreign
 import Prelude (bind, pure, ($), (<$>), (>>=))
@@ -29,6 +29,7 @@ readRecordJSON jsStr = runExcept do
   doiSfx <- readNEStringImpl ctxt recBase.data.attributes.suffix
   creatorsIn <- readNEArrayImpl ctxt recBase.data.attributes.creators
   creators <- mkCreators creatorsIn
+  titles <- readNEArrayImpl ctxt recBase.data.attributes.titles
   pure $ recBase { "data" {
       id = resId
     , "type" = idType
@@ -37,6 +38,7 @@ readRecordJSON jsStr = runExcept do
       , prefix = doiPfx
       , suffix = doiSfx
       , creators = creators
+      , titles = titles
       }
     }}
   where
