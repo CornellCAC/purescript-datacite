@@ -3,6 +3,7 @@ module DataCite.Types where
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Maybe (Maybe)
 import Data.String.NonEmpty (NonEmptyString)
+import DataCite.Types.Common
 
 type ResourceRows = (
   data :: Data
@@ -40,31 +41,24 @@ type DataRows = (
 
 type Data = Record DataRows
 
+type SchemaVersion = {major :: Int, minor :: Int}
+dataCiteVersion :: SchemaVersion
+dataCiteVersion = {major: 4, minor: 3}
+
 type AttributesRows = (
   doi :: NonEmptyString
 , prefix :: NonEmptyString
 , suffix :: NonEmptyString
 , identifiers :: Array Identifier
-, alternateIdentifiers :: Array AlternateIdentifier
+, alternateIdentifiers :: Array Identifier
 , creators :: NonEmptyArray Creator
 , titles :: NonEmptyArray Title
+, publisher :: NonEmptyString
+, container :: Maybe Container
 )
 
 -- | Combines the Identifier and AlternateIdentifier properties from XML.
 type Attributes = Record AttributesRows
-
--- TODO Not entirely sure about how this relates to doi
-type IdentifierRows = (
-  identifier :: String
-, identifierType :: String
-)
-type Identifier = Record IdentifierRows
-
-type AlternateIdentifierRows = (
-  alternateIdentifier :: String
-, alternateIdentifierType :: String
-)
-type AlternateIdentifier = Record AlternateIdentifierRows
 
 type CreatorRows = (
   name :: NonEmptyString
@@ -83,6 +77,14 @@ type TitleRows = (
 )
 
 type Title = Record TitleRows
+
+type ContainerRows = (
+  "type" :: Maybe NonEmptyString
+, identifier :: NonEmptyString
+, identifierType :: IdentifierType
+)
+
+type Container = Record ContainerRows
 
 type RelationshipsRows = (
 )

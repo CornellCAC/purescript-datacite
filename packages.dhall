@@ -81,32 +81,27 @@ let additions =
   , etc.
   }
 -------------------------------
-
-Example:
--------------------------------
-let additions =
-  { benchotron =
-      mkPackage
-        [ "arrays"
-        , "exists"
-        , "profunctor"
-        , "strings"
-        , "quickcheck"
-        , "lcg"
-        , "transformers"
-        , "foldable-traversable"
-        , "exceptions"
-        , "node-fs"
-        , "node-buffer"
-        , "node-readline"
-        , "datetime"
-        , "now"
-        ]
-        "https://github.com/hdgarrood/purescript-benchotron.git"
-        "v7.0.0"
-  }
--------------------------------
 -}
+
+let additions =
+{ enums =
+    { dependencies =
+      [ "control"
+      , "either"
+      , "gen"
+      , "maybe"
+      , "newtype"
+      , "nonempty"
+      , "partial"
+      , "prelude"
+      , "tuples"
+      , "unfoldable"
+      ]
+    , repo = "https://github.com/bbarker/purescript-enums.git"
+    , version = "1979eb74baec39b5e62567948f402b4194230e9f"
+    }
+}
+
 
 let mkPackage =
       https://raw.githubusercontent.com/purescript/package-sets/psc-0.12.3-20190330/src/mkPackage.dhall sha256:0b197efa1d397ace6eb46b243ff2d73a3da5638d8d0ac8473e8e4a8fc528cf57
@@ -116,6 +111,6 @@ let upstream =
 
 let overrides = {=}
 
-let additions = {=}
+-- let additions = {=}
 
 in  upstream // overrides // additions
