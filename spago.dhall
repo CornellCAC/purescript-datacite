@@ -4,6 +4,6 @@ You can edit this file as you like.
 -}
 { sources = [ "src/**/*.purs" ]
 , name = "purescript-datacite"
-, dependencies = [ "effect", "generics-rep", "simple-json" ]
+, dependencies = [ "effect", "functors", "generics-rep", "simple-json" ]
 , packages = ./packages.dhall
 }

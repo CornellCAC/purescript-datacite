@@ -1,22 +1,62 @@
 module DataCite.JSON.Decode.Simple where
 
-import Control.Monad.Except (except, runExcept)
+import Control.Applicative (class Applicative)
+import Control.Apply (class Apply)
+import Control.Bind (class Bind)
+import Control.Category ((>>>))
+import Control.Monad (class Monad)
+import Control.Monad.Error.Class (class MonadThrow, throwError)
+import Control.Monad.Except (Except, except, runExcept)
+import Control.Monad.Except.Trans (ExceptT)
+import Control.Monad.Writer (Writer, runWriter)
+import Control.Monad.Writer.Trans (WriterT)
 import Data.Array.NonEmpty (NonEmptyArray, fromArray)
 import Data.Either (Either(..))
+import Data.Functor (class Functor)
+import Data.Functor.Compose (Compose)
 import Data.HeytingAlgebra ((&&), (||))
 import Data.Lazy (Lazy, force)
+import Data.List.Lazy.NonEmpty (NonEmptyList, singleton)
 import Data.Maybe (Maybe(..))
 import Data.Semigroup ((<>))
 import Data.String.NonEmpty (NonEmptyString, fromString)
 import Data.Traversable (traverse)
+import Data.Tuple (Tuple(..))
 import DataCite.JSON.Util (tryPrettyJson)
 import DataCite.Types (Resource)
 import DataCite.Types.Common (Identifier)
-import Foreign (F, Foreign, isNull, isUndefined)
+import Foreign (F, Foreign, ForeignError, isNull, isUndefined)
 import Foreign as Foreign
-import Prelude (bind, pure, ($), (>>=))
+import Prelude (class Applicative, bind, pure, ($), (>>=))
 import Simple.JSON as JSON
 import Type.Data.Row (RProxy(..))
+
+
+newtype JSONWithErr a = JSONWithErr (Writer (Array Foreign.ForeignError) a)
+
+derive newtype instance jsonWithErrApply :: Apply JSONWithErr
+derive newtype instance jsonWithErrApplicative :: Applicative JSONWithErr
+derive newtype instance jsonWithErrFunctor :: Functor JSONWithErr
+derive newtype instance jsonWithErrBind :: Bind JSONWithErr
+derive newtype instance jsonWithErrMonad :: Monad JSONWithErr
+
+
+newtype JSONExcept a = JSONExcept (ExceptT Foreign.MultipleErrors JSONWithErr a)
+
+derive newtype instance jsonExceptApply :: Apply JSONExcept
+derive newtype instance jsonExceptApplicative :: Applicative JSONExcept
+derive newtype instance jsonExceptFunctor :: Functor JSONExcept
+derive newtype instance jsonExceptBind :: Bind JSONExcept
+derive newtype instance jsonExceptMonad :: Monad JSONExcept
+
+
+{- instance JSONExceptError :: MonadThrow (NonEmptyList ForeignError) JSONExcept where
+  throwError es = JSONExcept $ pure $ pure $ except $ Left es -- Left >>> except >>> pure
+ -}
+
+{- instance JSONExceptError :: MonadThrow Foreign.ForeignError JSONExcept where
+  throwError e = JSONExcept $ pure $ except $ Left $ singleton e -}
+
 
 -- TODO: make an optional preparser to remove fields that are definitely unused,
 -- called before readRecordJSON; this will make the JSON easier to view
@@ -27,6 +67,7 @@ type IdTypePairF r = (identifier :: Foreign, identifierType :: Foreign | r)
 emptyRow :: RProxy ()
 emptyRow = RProxy
 
+--readRecordJSON :: String -> Tuple (Array Foreign.ForeignError) (Either Foreign.MultipleErrors Resource)
 readRecordJSON :: String -> Either Foreign.MultipleErrors Resource
 readRecordJSON jsStr = runExcept do
   recBase <- JSON.readJSON' jsStr
