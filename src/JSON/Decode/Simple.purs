@@ -9,6 +9,7 @@ import Control.Monad.Error.Class (class MonadThrow, throwError)
 import Control.Monad.Except (Except, except, runExcept)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Writer (Writer, runWriter)
+import Control.Monad.Writer.Class (class MonadTell, class MonadWriter)
 import Control.Monad.Writer.Trans (WriterT)
 import Data.Array.NonEmpty (NonEmptyArray, fromArray)
 import Data.Either (Either(..))
@@ -39,23 +40,19 @@ derive newtype instance jsonWithErrApplicative :: Applicative JSONWithErr
 derive newtype instance jsonWithErrFunctor :: Functor JSONWithErr
 derive newtype instance jsonWithErrBind :: Bind JSONWithErr
 derive newtype instance jsonWithErrMonad :: Monad JSONWithErr
+derive newtype instance jsonWithErrTell :: MonadTell (Array Foreign.ForeignError) JSONWithErr
+derive newtype instance jsonWithErrWriter :: MonadWriter (Array Foreign.ForeignError) JSONWithErr
 
-
-newtype JSONExcept a = JSONExcept (ExceptT Foreign.MultipleErrors JSONWithErr a)
+newtype JSONExcept a = JSONExcept (ExceptT (NonEmptyList ForeignError) JSONWithErr a)
 
 derive newtype instance jsonExceptApply :: Apply JSONExcept
 derive newtype instance jsonExceptApplicative :: Applicative JSONExcept
 derive newtype instance jsonExceptFunctor :: Functor JSONExcept
 derive newtype instance jsonExceptBind :: Bind JSONExcept
 derive newtype instance jsonExceptMonad :: Monad JSONExcept
-
-
-{- instance JSONExceptError :: MonadThrow (NonEmptyList ForeignError) JSONExcept where
-  throwError es = JSONExcept $ pure $ pure $ except $ Left es -- Left >>> except >>> pure
- -}
-
-{- instance JSONExceptError :: MonadThrow Foreign.ForeignError JSONExcept where
-  throwError e = JSONExcept $ pure $ except $ Left $ singleton e -}
+derive newtype instance jsonExceptTell :: MonadTell (Array Foreign.ForeignError) JSONExcept
+derive newtype instance jsonExceptWriter :: MonadWriter (Array Foreign.ForeignError) JSONExcept
+derive newtype instance jsonExceptThrow :: MonadThrow (NonEmptyList ForeignError) JSONExcept
 
 
 -- TODO: make an optional preparser to remove fields that are definitely unused,
