@@ -6,19 +6,23 @@ import Control.Bind (class Bind)
 import Control.Category ((>>>))
 import Control.Monad (class Monad)
 import Control.Monad.Error.Class (class MonadThrow, throwError)
-import Control.Monad.Except (Except, except, runExcept)
-import Control.Monad.Except.Trans (ExceptT)
+import Control.Monad.Except (Except, except, mapExceptT, runExcept)
+import Control.Monad.Except.Trans (ExceptT(..), mapExceptT)
+import Control.Monad.Trans.Class (lift)
 import Control.Monad.Writer (Writer, runWriter)
 import Control.Monad.Writer.Class (class MonadTell, class MonadWriter)
-import Control.Monad.Writer.Trans (WriterT)
+import Control.Monad.Writer.Trans (WriterT(..))
 import Data.Array.NonEmpty (NonEmptyArray, fromArray)
 import Data.Either (Either(..))
 import Data.Functor (class Functor)
 import Data.Functor.Compose (Compose)
 import Data.HeytingAlgebra ((&&), (||))
+import Data.Identity (Identity)
 import Data.Lazy (Lazy, force)
-import Data.List.Lazy.NonEmpty (NonEmptyList, singleton)
+import Data.List.Lazy.NonEmpty (singleton)
+import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..))
+import Data.Newtype (class Newtype, unwrap)
 import Data.Semigroup ((<>))
 import Data.String.NonEmpty (NonEmptyString, fromString)
 import Data.Traversable (traverse)
@@ -28,7 +32,7 @@ import DataCite.Types (Resource)
 import DataCite.Types.Common (Identifier)
 import Foreign (F, Foreign, ForeignError, isNull, isUndefined)
 import Foreign as Foreign
-import Prelude (class Applicative, bind, pure, ($), (>>=))
+import Prelude (class Applicative, bind, pure, ($), (<$>), (>>=))
 import Simple.JSON as JSON
 import Type.Data.Row (RProxy(..))
 
@@ -43,16 +47,26 @@ derive newtype instance jsonWithErrMonad :: Monad JSONWithErr
 derive newtype instance jsonWithErrTell :: MonadTell (Array Foreign.ForeignError) JSONWithErr
 derive newtype instance jsonWithErrWriter :: MonadWriter (Array Foreign.ForeignError) JSONWithErr
 
-newtype JSONExcept a = JSONExcept (ExceptT (NonEmptyList ForeignError) JSONWithErr a)
+newtype JSONParse a = JSONParse (ExceptT (NonEmptyList ForeignError) JSONWithErr a)
 
-derive newtype instance jsonExceptApply :: Apply JSONExcept
-derive newtype instance jsonExceptApplicative :: Applicative JSONExcept
-derive newtype instance jsonExceptFunctor :: Functor JSONExcept
-derive newtype instance jsonExceptBind :: Bind JSONExcept
-derive newtype instance jsonExceptMonad :: Monad JSONExcept
-derive newtype instance jsonExceptTell :: MonadTell (Array Foreign.ForeignError) JSONExcept
-derive newtype instance jsonExceptWriter :: MonadWriter (Array Foreign.ForeignError) JSONExcept
-derive newtype instance jsonExceptThrow :: MonadThrow (NonEmptyList ForeignError) JSONExcept
+derive newtype instance jsonParseApply :: Apply JSONParse
+derive newtype instance jsonParseApplicative :: Applicative JSONParse
+derive newtype instance jsonParseFunctor :: Functor JSONParse
+derive newtype instance jsonParseBind :: Bind JSONParse
+derive newtype instance jsonParseMonad :: Monad JSONParse
+derive newtype instance jsonParseTell :: MonadTell (Array Foreign.ForeignError) JSONParse
+derive newtype instance jsonParseWriter :: MonadWriter (Array Foreign.ForeignError) JSONParse
+derive newtype instance jsonParseThrow :: MonadThrow (NonEmptyList ForeignError) JSONParse
+
+generalize :: forall m a. Monad m => Identity a -> m a
+generalize = unwrap >>> pure
+
+-- note: Except e = ExceptT e Identity
+genExcept :: forall m e a. Monad m => ExceptT e Identity a -> ExceptT e m a
+genExcept = unwrap >>> generalize >>> ExceptT
+
+readJSON' :: forall a. JSON.ReadForeign a => String -> JSONParse a
+readJSON' s = JSONParse $ genExcept $ JSON.readJSON' s
 
 
 -- TODO: make an optional preparser to remove fields that are definitely unused,
