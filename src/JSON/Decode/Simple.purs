@@ -3,42 +3,48 @@ module DataCite.JSON.Decode.Simple where
 import Control.Applicative (class Applicative)
 import Control.Apply (class Apply)
 import Control.Bind (class Bind)
-import Control.Category ((>>>))
+import Control.Category ((<<<), (>>>))
 import Control.Monad (class Monad)
 import Control.Monad.Error.Class (class MonadThrow, throwError)
 import Control.Monad.Except (Except, except, mapExceptT, runExcept)
-import Control.Monad.Except.Trans (ExceptT(..), mapExceptT)
+import Control.Monad.Except.Trans (ExceptT(..), mapExceptT, runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Writer (Writer, runWriter)
-import Control.Monad.Writer.Class (class MonadTell, class MonadWriter)
+import Control.Monad.Writer.Class (class MonadTell, class MonadWriter, tell)
 import Control.Monad.Writer.Trans (WriterT(..))
+import Data.Array as A
 import Data.Array.NonEmpty (NonEmptyArray, fromArray)
+import Data.Bifunctor (lmap, rmap)
 import Data.Either (Either(..))
+import Data.Foldable (sequence_, traverse_)
 import Data.Functor (class Functor)
 import Data.Functor.Compose (Compose)
 import Data.HeytingAlgebra ((&&), (||))
 import Data.Identity (Identity)
 import Data.Lazy (Lazy, force)
-import Data.List.Lazy.NonEmpty (singleton)
+import Data.List.Lazy as LL
+import Data.List.Lazy.Types as LL
+import Data.List.NonEmpty (NonEmptyList, toUnfoldable)
 import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.Semigroup ((<>))
 import Data.String.NonEmpty (NonEmptyString, fromString)
-import Data.Traversable (traverse)
+import Data.Traversable (sequence, traverse)
 import Data.Tuple (Tuple(..))
 import DataCite.JSON.Util (tryPrettyJson)
 import DataCite.Types (Resource)
 import DataCite.Types.Common (Identifier)
-import Foreign (F, Foreign, ForeignError, isNull, isUndefined)
+import Foreign (F, Foreign, ForeignError, MultipleErrors, isNull, isUndefined)
 import Foreign as Foreign
-import Prelude (class Applicative, bind, pure, ($), (<$>), (>>=))
+import Prelude (class Applicative, Unit, bind, identity, join, map, pure, ($), (<$>), (>>=))
+import Simple.JSON (class ReadForeign)
 import Simple.JSON as JSON
 import Type.Data.Row (RProxy(..))
 
 
 newtype JSONWithErr a = JSONWithErr (Writer (Array Foreign.ForeignError) a)
-
+derive instance newtypeJSONWithErr:: Newtype (JSONWithErr a) _
 derive newtype instance jsonWithErrApply :: Apply JSONWithErr
 derive newtype instance jsonWithErrApplicative :: Applicative JSONWithErr
 derive newtype instance jsonWithErrFunctor :: Functor JSONWithErr
@@ -48,7 +54,7 @@ derive newtype instance jsonWithErrTell :: MonadTell (Array Foreign.ForeignError
 derive newtype instance jsonWithErrWriter :: MonadWriter (Array Foreign.ForeignError) JSONWithErr
 
 newtype JSONParse a = JSONParse (ExceptT (NonEmptyList ForeignError) JSONWithErr a)
-
+derive instance newtypeJSONParse:: Newtype (JSONParse a) _
 derive newtype instance jsonParseApply :: Apply JSONParse
 derive newtype instance jsonParseApplicative :: Applicative JSONParse
 derive newtype instance jsonParseFunctor :: Functor JSONParse
@@ -65,9 +71,17 @@ generalize = unwrap >>> pure
 genExcept :: forall m e a. Monad m => ExceptT e Identity a -> ExceptT e m a
 genExcept = unwrap >>> generalize >>> ExceptT
 
+-- Original API is:
+-- readJSON' :: forall a. ReadForeign a => String -> F a
+-- type F = Except MultipleErrors == ExceptT MultipleErrors Identity
 readJSON' :: forall a. JSON.ReadForeign a => String -> JSONParse a
-readJSON' s = JSONParse $ genExcept $ JSON.readJSON' s
+readJSON' = JSONParse <<< genExcept <<< JSON.readJSON'
 
+read' :: forall a. ReadForeign a => Foreign -> JSONParse a
+read' = JSONParse <<< genExcept <<< JSON.read'
+
+readArray :: Foreign -> JSONParse (Array Foreign)
+readArray = JSONParse <<< genExcept <<< Foreign.readArray
 
 -- TODO: make an optional preparser to remove fields that are definitely unused,
 -- called before readRecordJSON; this will make the JSON easier to view
@@ -79,9 +93,12 @@ emptyRow :: RProxy ()
 emptyRow = RProxy
 
 --readRecordJSON :: String -> Tuple (Array Foreign.ForeignError) (Either Foreign.MultipleErrors Resource)
-readRecordJSON :: String -> Either Foreign.MultipleErrors Resource
-readRecordJSON jsStr = runExcept do
-  recBase <- JSON.readJSON' jsStr
+--readRecordJSON :: String -> Either Foreign.MultipleErrors (JSONWithErr Resource)
+--readRecordJSON jsStr = runExceptT $ unwrap $ do
+
+readRecordJSON' :: String -> JSONParse Resource
+readRecordJSON' jsStr = do
+  recBase <- readJSON' jsStr
   resId <- readNEStringImpl ctxt recBase.data.id
   idType <- readNEStringImpl ctxt recBase.data.type
   doi <- readNEStringImpl ctxt recBase.data.attributes.doi
@@ -124,11 +141,12 @@ readRecordJSON jsStr = runExcept do
         , affiliation = affilsNE
         }
       ) ctors
-    mkCont contIn = if isNot contIn.type
+    mkCont contIn =
+      if isNot contIn.type
         && isNot contIn.identifier
         && isNot contIn.identifierType then pure Nothing
       else do
-        typeStr  <- JSON.read' contIn."type"
+        typeStr  <- read' contIn."type"
         let typeMay = fromString typeStr
         idPair <- readIdTypePair ctxt contIn
         pure $ Just $ contIn {
@@ -137,33 +155,36 @@ readRecordJSON jsStr = runExcept do
           , identifierType = idPair.identifierType
           }
 
-readNEStringImpl :: Lazy String -> Foreign -> F NonEmptyString
+readNEStringImpl :: Lazy String -> Foreign -> JSONParse NonEmptyString
 readNEStringImpl ctxt f = do
-  str :: String <- JSON.readImpl f
-  except $ case fromString str of
-    Just nes -> Right nes
-    Nothing -> Left $ pure $ Foreign.ForeignError $ 
+  str :: String <- read' f
+  case fromString str of
+    Just nes -> pure nes
+    Nothing -> throwError $ pure $ Foreign.ForeignError $
       "Nonempty string expected in:\n" <> (force ctxt)
 
 
 readNEArrayImpl :: forall a. JSON.ReadForeign a
-  => Lazy String -> Foreign -> F (NonEmptyArray a)
+  => Lazy String -> Foreign -> JSONParse (NonEmptyArray a)
 readNEArrayImpl ctxt f = do
-  arr <- JSON.readImpl f
-  except $ case fromArray arr of
-    Just nea -> Right nea
-    Nothing -> Left $ pure $ Foreign.ForeignError $ 
+  arrF <- readArray f
+  let arrEis = map (JSON.read' >>> runExcept) arrF
+  _ <- traverse_ tell $ map toUnfoldable $ catLefts arrEis
+  let arr = catRights arrEis
+  case fromArray arr of
+    Just nea -> pure nea
+    Nothing -> throwError $ pure $ Foreign.ForeignError $
       "Nonempty array expected in:\n" <> (force ctxt)
 
 
-readIdTypePair :: forall r. Lazy String -> Record (IdTypePairF r) -> F Identifier
+readIdTypePair :: forall r. Lazy String -> Record (IdTypePairF r) -> JSONParse Identifier
 readIdTypePair ctxt idPairF = do
   id <- readNEStringImpl ctxt idPairF.identifier
-  idType <- JSON.read' idPairF.identifierType
+  idType <- read' idPairF.identifierType
   pure $ {identifier: id, identifierType: idType}
 
 readIdTypePairPx :: forall r. RProxy r
-  -> Lazy String -> Record (IdTypePairF r) -> F Identifier
+  -> Lazy String -> Record (IdTypePairF r) -> JSONParse Identifier
 readIdTypePairPx _ ctxt idPairF = readIdTypePair ctxt idPairF
 
 
@@ -173,3 +194,23 @@ mayStrToStr Nothing = ""
 
 isNot :: Foreign -> Boolean
 isNot x = isNull x || isUndefined x
+
+catLefts ::  forall a b. Array (Either a b) -> Array a
+catLefts = catMapLefts identity
+
+catMapLefts :: forall a b c. (a -> c) -> Array (Either a b) -> Array c
+catMapLefts f = A.concatMap (leftOr [] (A.singleton <<< f))
+
+leftOr :: forall a b c. c -> (a -> c) -> Either a b -> c
+leftOr _ f (Left a) = f a
+leftOr c _ (Right _) = c
+
+catRights ::  forall a b. Array (Either a b) -> Array b
+catRights = catMapRights identity
+
+catMapRights :: forall a b c. (b -> c) -> Array (Either a b) -> Array c
+catMapRights f = A.concatMap (rightOr [] (A.singleton <<< f))
+
+rightOr :: forall a b c. c -> (b -> c) -> Either a b -> c
+rightOr c _ (Left _) = c
+rightOr _ f (Right b) = f b
