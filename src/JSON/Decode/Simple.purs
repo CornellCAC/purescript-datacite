@@ -5,7 +5,7 @@ import Control.Bind (class Bind)
 import Control.Category ((<<<), (>>>))
 import Control.Monad (class Monad)
 import Control.Monad.Error.Class (class MonadThrow, throwError)
-import Control.Monad.Except (runExcept)
+import Control.Monad.Except (runExcept, runExceptT)
 import Control.Monad.Except.Trans (ExceptT(..))
 import Control.Monad.Writer (Writer)
 import Control.Monad.Writer.Class (class MonadTell, class MonadWriter, tell)
@@ -35,15 +35,15 @@ import Simple.JSON as JSON
 import Type.Data.Row (RProxy(..))
 
 
-newtype JSONWithErr a = JSONWithErr (Writer (Array Foreign.ForeignError) a)
+newtype JSONWithErr a = JSONWithErr (Writer (Array ForeignError) a)
 derive instance newtypeJSONWithErr:: Newtype (JSONWithErr a) _
 derive newtype instance jsonWithErrApply :: Apply JSONWithErr
 derive newtype instance jsonWithErrApplicative :: Applicative JSONWithErr
 derive newtype instance jsonWithErrFunctor :: Functor JSONWithErr
 derive newtype instance jsonWithErrBind :: Bind JSONWithErr
 derive newtype instance jsonWithErrMonad :: Monad JSONWithErr
-derive newtype instance jsonWithErrTell :: MonadTell (Array Foreign.ForeignError) JSONWithErr
-derive newtype instance jsonWithErrWriter :: MonadWriter (Array Foreign.ForeignError) JSONWithErr
+derive newtype instance jsonWithErrTell :: MonadTell (Array ForeignError) JSONWithErr
+derive newtype instance jsonWithErrWriter :: MonadWriter (Array ForeignError) JSONWithErr
 
 newtype JSONParse a = JSONParse (ExceptT (NonEmptyList ForeignError) JSONWithErr a)
 derive instance newtypeJSONParse:: Newtype (JSONParse a) _
@@ -52,8 +52,8 @@ derive newtype instance jsonParseApplicative :: Applicative JSONParse
 derive newtype instance jsonParseFunctor :: Functor JSONParse
 derive newtype instance jsonParseBind :: Bind JSONParse
 derive newtype instance jsonParseMonad :: Monad JSONParse
-derive newtype instance jsonParseTell :: MonadTell (Array Foreign.ForeignError) JSONParse
-derive newtype instance jsonParseWriter :: MonadWriter (Array Foreign.ForeignError) JSONParse
+derive newtype instance jsonParseTell :: MonadTell (Array ForeignError) JSONParse
+derive newtype instance jsonParseWriter :: MonadWriter (Array ForeignError) JSONParse
 derive newtype instance jsonParseThrow :: MonadThrow (NonEmptyList ForeignError) JSONParse
 
 generalize :: forall m a. Monad m => Identity a -> m a
@@ -84,9 +84,8 @@ type IdTypePairF r = (identifier :: Foreign, identifierType :: Foreign | r)
 emptyRow :: RProxy ()
 emptyRow = RProxy
 
---readRecordJSON :: String -> Tuple (Array Foreign.ForeignError) (Either Foreign.MultipleErrors Resource)
---readRecordJSON :: String -> Either Foreign.MultipleErrors (JSONWithErr Resource)
---readRecordJSON jsStr = runExceptT $ unwrap $ do
+readRecordJSON :: String -> JSONWithErr (Either Foreign.MultipleErrors Resource)
+readRecordJSON jsStr = runExceptT $ unwrap $ readRecordJSON' jsStr
 
 readRecordJSON' :: String -> JSONParse Resource
 readRecordJSON' jsStr = do
