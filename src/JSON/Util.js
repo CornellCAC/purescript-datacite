@@ -14,3 +14,14 @@ exports.tryPrettyJson = function (jString) {
     return jsPretty;
   };
 };
+
+exports.preParse = function (jString) {
+  var jsObj = JSON.parse(jString)
+  jsObj['data']['attributes']['xml'] = undefined;
+  var strOut = JSON.stringify(jsObj);
+  if (strOut === undefined || strOut === null) {
+    return "";
+  } else {
+    return strOut
+  } 
+};

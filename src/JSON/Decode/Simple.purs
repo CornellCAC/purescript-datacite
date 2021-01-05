@@ -25,7 +25,7 @@ import Data.Semigroup ((<>))
 import Data.String.NonEmpty (NonEmptyString, fromString)
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
-import DataCite.JSON.Util (tryPrettyJson)
+import DataCite.JSON.Util (preParse, tryPrettyJson)
 import DataCite.Types (Resource)
 import DataCite.Types.Common (Identifier, IdentifierType(..))
 import Foreign (Foreign, ForeignError, isNull, isUndefined)
@@ -95,17 +95,14 @@ read' = JSONParse <<< genExcept <<< JSON.read'
 readArray :: Foreign -> JSONParse (Array Foreign)
 readArray = JSONParse <<< genExcept <<< Foreign.readArray
 
--- TODO: make an optional preparser to remove fields that are definitely unused,
--- called before readRecordJSON; this will make the JSON easier to view
--- in case of errors.
-
 type IdTypePairF r = (identifier :: Foreign, identifierType :: Foreign | r)
 
 emptyRow :: RProxy ()
 emptyRow = RProxy
 
+-- | Note: calls `preParse`, unlike `readRecordJSON'`.
 readRecordJSON :: String -> JSONWithErr (Either Foreign.MultipleErrors Resource)
-readRecordJSON jsStr = runExceptT $ unwrap $ readRecordJSON' jsStr
+readRecordJSON jsStr = runExceptT $ unwrap $ readRecordJSON' $ preParse jsStr
 
 readRecordJSON' :: String -> JSONParse Resource
 readRecordJSON' jsStr = do
