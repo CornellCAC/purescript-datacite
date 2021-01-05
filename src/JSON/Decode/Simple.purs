@@ -166,9 +166,12 @@ readRecordJSON' jsStr = do
           , identifierType = idPair.identifierType
           }
 
+readStr :: Foreign -> JSONParse String
+readStr f = toNonFatalDef "" $ read' f
+
 readNEStringImpl :: Lazy String -> Foreign -> JSONParse NonEmptyString
 readNEStringImpl ctxt f = do
-  str :: String <- read' f
+  str <- readStr f
   case fromString str of
     Just nes -> pure nes
     Nothing -> throwError $ pure $ Foreign.ForeignError $
