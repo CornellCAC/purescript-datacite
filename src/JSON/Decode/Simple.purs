@@ -7,7 +7,7 @@ import Control.Monad (class Monad)
 import Control.Monad.Error.Class (class MonadThrow, throwError)
 import Control.Monad.Except (runExcept, runExceptT)
 import Control.Monad.Except.Trans (ExceptT(..))
-import Control.Monad.Writer (Writer)
+import Control.Monad.Writer (Writer, runWriter)
 import Control.Monad.Writer.Class (class MonadTell, class MonadWriter, tell)
 import Data.Array as A
 import Data.Array.NonEmpty (NonEmptyArray, fromArray)
@@ -24,12 +24,13 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.Semigroup ((<>))
 import Data.String.NonEmpty (NonEmptyString, fromString)
 import Data.Traversable (traverse)
+import Data.Tuple (Tuple(..))
 import DataCite.JSON.Util (tryPrettyJson)
 import DataCite.Types (Resource)
-import DataCite.Types.Common (Identifier)
+import DataCite.Types.Common (Identifier, IdentifierType(..))
 import Foreign (Foreign, ForeignError, isNull, isUndefined)
 import Foreign as Foreign
-import Prelude (class Applicative, bind, identity, map, pure, ($), (>>=))
+import Prelude (class Applicative, bind, discard, identity, map, pure, ($), (>>=))
 import Simple.JSON (class ReadForeign)
 import Simple.JSON as JSON
 import Type.Data.Row (RProxy(..))
@@ -62,6 +63,25 @@ generalize = unwrap >>> pure
 -- note: Except e = ExceptT e Identity
 genExcept :: forall m e a. Monad m => ExceptT e Identity a -> ExceptT e m a
 genExcept = unwrap >>> generalize >>> ExceptT
+
+
+toNonFatalDef :: forall a. a -> JSONParse a -> JSONParse a
+toNonFatalDef def jParse = case jsonEi of
+    Left (errs) -> do
+      tell $ toUnfoldable errs
+      pure def
+    Right (_) -> jParse
+  where
+    Tuple jsonEi nfErrs = runWriter $ unwrap $ runExceptT $ unwrap jParse
+
+toNonFatalOther :: forall a b. b -> JSONParse a -> JSONParse (Either b a)
+toNonFatalOther def jParse = case jsonEi of
+    Left (errs) -> do
+      tell $ toUnfoldable errs
+      pure $ Left def
+    Right a -> pure $ Right a
+  where
+    Tuple jsonEi nfErrs = runWriter $ unwrap $ runExceptT $ unwrap jParse
 
 -- Original API is:
 -- readJSON' :: forall a. ReadForeign a => String -> F a
@@ -160,7 +180,7 @@ readNEArrayImpl :: forall a. JSON.ReadForeign a
 readNEArrayImpl ctxt f = do
   arrF <- readArray f
   let arrEis = map (JSON.read' >>> runExcept) arrF
-  _ <- traverse_ tell $ map toUnfoldable $ catLefts arrEis
+  traverse_ tell $ map toUnfoldable $ catLefts arrEis
   let arr = catRights arrEis
   case fromArray arr of
     Just nea -> pure nea
@@ -168,10 +188,13 @@ readNEArrayImpl ctxt f = do
       "Nonempty array expected in:\n" <> (force ctxt)
 
 
+-- | Assigns Handle as the default identifier type in case
+-- | a document doesn't follow the schema.
 readIdTypePair :: forall r. Lazy String -> Record (IdTypePairF r) -> JSONParse Identifier
 readIdTypePair ctxt idPairF = do
   id <- readNEStringImpl ctxt idPairF.identifier
-  idType <- read' idPairF.identifierType
+  let idTypeParse = read' idPairF.identifierType
+  idType <- toNonFatalDef Handle idTypeParse
   pure $ {identifier: id, identifierType: idType}
 
 readIdTypePairPx :: forall r. RProxy r

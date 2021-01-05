@@ -53,7 +53,7 @@ testJsonFile fp = do
   let (Tuple jsonRes errs) = runWriter $ unwrap jsonResW
   logNonFatals ("NonFatal errors in parsing" <> fp) errs
   when (isLeft jsonRes) $ liftEffect $ log $ show $ jsonRes
-  assert ("isRight on " <> fp) $ isRight jsonRes
+  assert ("not isRight on " <> fp) $ isRight jsonRes
 
 allJsonFiles :: Effect (Array FilePath)
 allJsonFiles = do
