@@ -188,6 +188,17 @@ type Identifier = Record (BaseIdRows())
 type RelatedIdentifierRows = BaseIdRows (relationType :: RelationType)
 type RelatedIdentifier = Record RelatedIdentifierRows
 
+type AltId = Record (
+  alternateIdentifier :: NonEmptyString
+, alternateIdentifierType :: IdentifierType
+)
+
+altIdToId ::  AltId -> Identifier
+altIdToId altId = {
+  identifier: altId.alternateIdentifier
+, identifierType: altId.alternateIdentifierType
+}
+
 -- The below are quite generic and are copied from
 -- https://purescript-simple-json.readthedocs.io/en/latest/generics-rep.html
 
