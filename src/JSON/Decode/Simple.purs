@@ -24,13 +24,14 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.Semigroup ((<>))
 import Data.String.NonEmpty (NonEmptyString, fromString)
 import Data.Traversable (traverse)
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple(..), fst, snd)
 import DataCite.JSON.Util (preParse, tryPrettyJson)
-import DataCite.Types (Resource)
+import DataCite.Types (Resource, Title)
 import DataCite.Types.Common (Identifier, IdentifierType(..), altIdToId)
 import Foreign (Foreign, ForeignError, isNull, isUndefined)
 import Foreign as Foreign
-import Prelude (class Applicative, bind, discard, identity, map, pure, ($), (>>=))
+import Foreign.Index as Foreign
+import Prelude (class Applicative, bind, discard, identity, map, pure, ($), (<$>), (>>=))
 import Simple.JSON (class ReadForeign)
 import Simple.JSON as JSON
 import Type.Data.Row (RProxy(..))
@@ -92,6 +93,9 @@ readJSON' = JSONParse <<< genExcept <<< JSON.readJSON'
 read' :: forall a. ReadForeign a => Foreign -> JSONParse a
 read' = JSONParse <<< genExcept <<< JSON.read'
 
+readProp :: String -> Foreign -> JSONParse Foreign
+readProp field fObj = JSONParse $ genExcept $ Foreign.readProp field fObj
+
 readArray :: Foreign -> JSONParse (Array Foreign)
 readArray = JSONParse <<< genExcept <<< Foreign.readArray
 
@@ -112,19 +116,26 @@ readRecordJSON jsStr = runExceptT $ unwrap $ readRecordJSON' $ preParse jsStr
 readRecordJSON' :: String -> JSONParse Resource
 readRecordJSON' jsStr = do
   recBase <- readJSON' jsStr
-  resId <- readNEStringImpl (ctxt "data.id") recBase.data.id
-  idType <- readNEStringImpl (ctxt "data.type") recBase.data.type
-  doi <- readNEStringImpl (ctxt "data.attributes.doi") recBase.data.attributes.doi
-  doiPfx <- readNEStringImpl (ctxt "data.attributes.prefix") recBase.data.attributes.prefix
-  doiSfx <- readNEStringImpl (ctxt "data.attributes.suffix") recBase.data.attributes.suffix
+  resId <- readNEString (ctxt "data.id") recBase.data.id
+  idType <- readNEString (ctxt "data.type") recBase.data.type
+  doi <- readNEString (ctxt "data.attributes.doi")
+    recBase.data.attributes.doi
+  doiPfx <- readNEString (ctxt "data.attributes.prefix")
+    recBase.data.attributes.prefix
+  doiSfx <- readNEString (ctxt "data.attributes.suffix")
+    recBase.data.attributes.suffix
   idents <- traverse (readIdTypePairPx emptyRow (ctxt "data.attributes.identifiers"))
     recBase.data.attributes.identifiers
-  altIdents <- traverse (readAltIdTypePairPx emptyRow (ctxt "data.attributes.alternateIdentifiers"))
+  altIdents <- traverse
+    (readAltIdTypePairPx emptyRow (ctxt "data.attributes.alternateIdentifiers"))
     recBase.data.attributes.alternateIdentifiers
-  creatorsIn <- readNEArrayImpl (ctxt "data.attributes.creators") recBase.data.attributes.creators
+  creatorsIn <- readNEArray (ctxt "data.attributes.creators")
+    recBase.data.attributes.creators
   creators <- mkCreators creatorsIn
-  titles <- readNEArrayImpl (ctxt "data.attributes.titles") recBase.data.attributes.titles
-  publisher <- readNEStringImpl (ctxt "data.attributes.publisher") recBase.data.attributes.publisher
+  titles <- readNEArrayWith (ctxt "data.attributes.titles") readTitle
+    recBase.data.attributes.titles
+  publisher <- readNEString
+    (ctxt "data.attributes.publisher") recBase.data.attributes.publisher
   containerMay <- mkCont recBase.data.attributes.container
   pure $ recBase { "data" {
       id = resId
@@ -145,8 +156,8 @@ readRecordJSON' jsStr = do
     outerCtxt = tryPrettyJson jsStr
     ctxt = context outerCtxt
     mkCreators ctors = traverse (\ctr -> do
-      nameNE <- readNEStringImpl (ctxt "Creator name" ) ctr.name
-      affilsNE <- traverse (readNEStringImpl (ctxt "Creator affiliations"))
+      nameNE <- readNEString (ctxt "Creator name" ) ctr.name
+      affilsNE <- traverse (readNEString (ctxt "Creator affiliations"))
         ctr.affiliation
       pure $ ctr {
           name = nameNE
@@ -177,20 +188,19 @@ context ctxt label = defer \_ ->
 readStr :: Foreign -> JSONParse String
 readStr f = toNonFatalDef "" $ read' f
 
-readNEStringImpl :: Lazy String -> Foreign -> JSONParse NonEmptyString
-readNEStringImpl ctxt f = do
+readNEString :: Lazy String -> Foreign -> JSONParse NonEmptyString
+readNEString ctxt f = do
   str <- readStr f
   case fromString str of
     Just nes -> pure nes
     Nothing -> throwError $ pure $ Foreign.ForeignError $
       "Nonempty string expected in:\n" <> (force ctxt)
 
-
-readNEArrayImpl :: forall a. JSON.ReadForeign a
+readNEArray :: forall a. JSON.ReadForeign a
   => Lazy String -> Foreign -> JSONParse (NonEmptyArray a)
-readNEArrayImpl ctxt f = do
+readNEArray ctxt f = do
   arrF <- readArray f
-  let arrEis = map (JSON.read' >>> runExcept) arrF
+  let arrEis = (JSON.read' >>> runExcept) <$> arrF
   traverse_ tell $ map toUnfoldable $ catLefts arrEis
   let arr = catRights arrEis
   case fromArray arr of
@@ -198,12 +208,35 @@ readNEArrayImpl ctxt f = do
     Nothing -> throwError $ pure $ Foreign.ForeignError $
       "Nonempty array expected in:\n" <> (force ctxt)
 
+readNEArrayWith :: forall a. Lazy String
+  -> (Lazy String -> Foreign -> JSONParse a) -> Foreign
+  -> JSONParse (NonEmptyArray a)
+readNEArrayWith ctxt read f = do
+  arrF <- readArray f
+  -- Tuple jsonEi nfErrs = runWriter $ unwrap $ runExceptT $ unwrap jParse
+  let arrTups = (read ctxt >>> unwrap >>> runExceptT >>> unwrap >>> runWriter)
+        <$> arrF
+  let arrEis = fst <$> arrTups
+  let nfErrs = snd <$> arrTups
+  traverse_ tell $ map toUnfoldable $ catLefts arrEis
+  traverse_ tell nfErrs
+  let arr = catRights arrEis
+  case fromArray arr of
+    Just nea -> pure nea
+    Nothing -> throwError $ pure $ Foreign.ForeignError $
+      "Nonempty array expected in:\n" <> (force ctxt)
+
+readTitle :: Lazy String -> Foreign -> JSONParse Title
+readTitle ctxt f = do
+  titleF <- readProp "title" f
+  title <- readNEString ctxt titleF
+  pure $ {title: title}
 
 -- | Assigns Handle as the default identifier type in case
 -- | a document doesn't follow the schema.
 readIdTypePair :: forall r. Lazy String -> Record (IdTypePairF r) -> JSONParse Identifier
 readIdTypePair ctxt idPairF = do
-  id <- readNEStringImpl ctxt idPairF.identifier
+  id <- readNEString ctxt idPairF.identifier
   let idTypeParse = read' idPairF.identifierType
   idType <- toNonFatalDef Handle idTypeParse
   pure $ {identifier: id, identifierType: idType}
@@ -214,7 +247,7 @@ readIdTypePairPx _ ctxt idPairF = readIdTypePair ctxt idPairF
 
 readAltIdTypePair :: forall r. Lazy String -> Record (AltIdTypePairF r) -> JSONParse Identifier
 readAltIdTypePair ctxt idPairF = do
-  id <- readNEStringImpl ctxt idPairF.alternateIdentifier
+  id <- readNEString ctxt idPairF.alternateIdentifier
   let idTypeParse = read' idPairF.alternateIdentifierType
   idType <- toNonFatalDef Handle idTypeParse
   pure $ altIdToId {alternateIdentifier: id, alternateIdentifierType: idType}

@@ -72,7 +72,7 @@ type CreatorRows = (
 type Creator = Record CreatorRows
 
 type TitleRows = (
-  title :: String
+  title :: NonEmptyString
   -- TODO: titleType
 )
 

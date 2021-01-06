@@ -25,3 +25,9 @@ exports.preParse = function (jString) {
     return strOut
   } 
 };
+
+exports.field = function (fieldName) {
+  return function (fObj) {
+    return fObj[fieldName];
+  };
+};
