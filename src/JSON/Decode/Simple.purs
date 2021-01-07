@@ -9,9 +9,9 @@ import Control.Monad.Except (runExcept, runExceptT)
 import Control.Monad.Except.Trans (ExceptT(..))
 import Control.Monad.Writer (Writer, runWriter)
 import Control.Monad.Writer.Class (class MonadTell, class MonadWriter, tell)
-import Data.Array as A
 import Data.Array.NonEmpty (NonEmptyArray, fromArray)
 import Data.Either (Either(..))
+import Data.Either.Extra (catLefts, catRights)
 import Data.Foldable (traverse_)
 import Data.Functor (class Functor)
 import Data.HeytingAlgebra ((&&), (||))
@@ -29,9 +29,9 @@ import DataCite.JSON.Util (preParse, tryPrettyJson)
 import DataCite.Types (Resource, Title)
 import DataCite.Types.Common (Identifier, IdentifierType(..), altIdToId)
 import Foreign (Foreign, ForeignError, isNull, isUndefined)
-import Foreign as Foreign
-import Foreign.Index as Foreign
-import Prelude (class Applicative, bind, discard, identity, map, pure, ($), (<$>), (>>=))
+import Foreign (ForeignError(..), MultipleErrors, readArray) as Foreign
+import Foreign.Index (readProp) as Foreign
+import Prelude (class Applicative, bind, discard, map, pure, ($), (<$>), (>>=))
 import Simple.JSON (class ReadForeign)
 import Simple.JSON as JSON
 import Type.Data.Row (RProxy(..))
@@ -267,23 +267,3 @@ mayStrToStr Nothing = ""
 
 isNot :: Foreign -> Boolean
 isNot x = isNull x || isUndefined x
-
-catLefts ::  forall a b. Array (Either a b) -> Array a
-catLefts = catMapLefts identity
-
-catMapLefts :: forall a b c. (a -> c) -> Array (Either a b) -> Array c
-catMapLefts f = A.concatMap (leftOr [] (A.singleton <<< f))
-
-leftOr :: forall a b c. c -> (a -> c) -> Either a b -> c
-leftOr _ f (Left a) = f a
-leftOr c _ (Right _) = c
-
-catRights ::  forall a b. Array (Either a b) -> Array b
-catRights = catMapRights identity
-
-catMapRights :: forall a b c. (b -> c) -> Array (Either a b) -> Array c
-catMapRights f = A.concatMap (rightOr [] (A.singleton <<< f))
-
-rightOr :: forall a b c. c -> (b -> c) -> Either a b -> c
-rightOr c _ (Left _) = c
-rightOr _ f (Right b) = f b

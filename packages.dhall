@@ -84,7 +84,13 @@ let additions =
 -}
 
 let additions =
-{ enums =
+{ either-extra =
+    { dependencies =
+      [ "either" ]
+    , repo = "https://github.com/bbarker/purescript-either-extra.git"
+    , version = "v0.0.3"
+    }
+  , enums =
     { dependencies =
       [ "control"
       , "either"
