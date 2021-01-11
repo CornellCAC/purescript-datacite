@@ -10,7 +10,7 @@ exports.tryPrettyJson = function (jString) {
       jsPretty = jString;
     } else {
       jsPretty = jsPrettyMay;
-    } 
+    }
     return jsPretty;
   };
 };
@@ -23,11 +23,5 @@ exports.preParse = function (jString) {
     return "";
   } else {
     return strOut
-  } 
-};
-
-exports.field = function (fieldName) {
-  return function (fObj) {
-    return fObj[fieldName];
-  };
+  }
 };
