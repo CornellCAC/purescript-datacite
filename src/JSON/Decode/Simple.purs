@@ -20,6 +20,7 @@ import Data.Lazy (Lazy, defer, force)
 import Data.List.NonEmpty (toUnfoldable)
 import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..))
+import Data.Natural (intToNat)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Semigroup ((<>))
 import Data.String.NonEmpty (NonEmptyString, fromString)
@@ -150,6 +151,7 @@ readRecordJSON' jsStr = do
       , titles = titles
       , publisher = publisher
       , container = containerMay
+      , publicationYear = intToNat recBase.data.attributes.publicationYear
       }
     }}
   where

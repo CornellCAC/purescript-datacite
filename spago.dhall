@@ -9,6 +9,7 @@ You can edit this file as you like.
   , "either-extra"
   , "functors"
   , "generics-rep"
+  , "naturals"
   , "simple-json"
   ]
 , packages = ./packages.dhall

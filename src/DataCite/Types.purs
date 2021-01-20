@@ -2,6 +2,7 @@ module DataCite.Types where
 
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Maybe (Maybe)
+import Data.Natural (Natural)
 import Data.String.NonEmpty (NonEmptyString)
 import DataCite.Types.Common
 
@@ -55,6 +56,7 @@ type AttributesRows = (
 , titles :: NonEmptyArray Title
 , publisher :: NonEmptyString
 , container :: Maybe Container
+, publicationYear :: Natural
 )
 
 -- | Combines the Identifier and AlternateIdentifier properties from XML.
