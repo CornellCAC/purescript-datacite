@@ -105,6 +105,11 @@ type AltIdTypePairF r = (
   alternateIdentifier :: Foreign
 , alternateIdentifierType :: Foreign | r
 )
+-- TODO: e.g. relatedIdentifiers":[{"relationType":"IsDocumentedBy","relatedIdentifier":"http://www.ncjrs.gov/pdffiles1/nij/224520.pdf","resourceTypeGeneral":"Text","relatedIdentifierType":"URL"}]
+type RelIdTypePairF r = (
+  relatedIdentifier :: Foreign
+, relatedIdentifierType :: Foreign | r
+)
 
 
 emptyRow :: RProxy ()
@@ -130,6 +135,9 @@ readRecordJSON' jsStr = do
   altIdents <- traverse
     (readAltIdTypePairPx emptyRow (ctxt "data.attributes.alternateIdentifiers"))
     recBase.data.attributes.alternateIdentifiers
+  -- relIdents <- traverse (
+  --     readRelIdTypePair emptyRow (ctxt "data.attributes.relatedIdentifiers")
+  --   ) recBase.data.attributes.relatedIdentifiers
   creatorsIn <- readNEArray (ctxt "data.attributes.creators")
     recBase.data.attributes.creators
   creators <- mkCreators creatorsIn
@@ -152,6 +160,7 @@ readRecordJSON' jsStr = do
       , publisher = publisher
       , container = containerMay
       , publicationYear = intToNat recBase.data.attributes.publicationYear
+      -- , relatedIdentifiers = relIdents
       }
     }}
   where
@@ -257,6 +266,19 @@ readAltIdTypePair ctxt idPairF = do
 readAltIdTypePairPx :: forall r. RProxy r
   -> Lazy String -> Record (AltIdTypePairF r) -> JSONParse Identifier
 readAltIdTypePairPx _ ctxt idPairF = readAltIdTypePair ctxt idPairF
+
+-- readRelIdTypePair :: forall r. Lazy String -> Record (RelIdTypePairF r)
+--   -> JSONParse Identifier
+-- readRelIdTypePair ctxt idPairF = do
+--   id <- readNEString ctxt idPairF.relatedIdentifier
+--   let idTypeParse = read' idPairF.relatedIdentifierType
+--   idType <- toNonFatalDef Handle idTypeParse
+--   pure $ altIdToId {relatedIdentifier: id, relatedIdentifierType: idType}
+
+-- readRelIdTypePairPx :: forall r. RProxy r
+--   -> Lazy String -> Record (RelIdTypePairF r) -> JSONParse Identifier
+-- readRelIdTypePairPx _ ctxt idPairF = readRelIdTypePair ctxt idPairF
+
 
 -- FIXME: remove
 {- readIdTypePairPxDummy :: forall r. RProxy r

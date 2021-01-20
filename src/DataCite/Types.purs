@@ -19,9 +19,7 @@ type DataRows = (
 , attributes :: Attributes
 , relationships :: Relationships
 
-{-, resource_publisher :: Publisher
-, resource_publicationYear :: YearType
-, resource_resourceType :: ResourceType
+{-, resource_resourceType :: ResourceType
 , resource_subjects :: Maybe Subjects
 , resource_contributors :: Maybe Contributors
 , resource_dates :: Maybe Dates
@@ -29,8 +27,6 @@ type DataRows = (
   -- ^ Primary language of the resource. Allowed values are taken 
   --  from IETF BCP 47, ISO 639-1 language codes.
   --  Currently just modeled as a string
-, resource_alternateIdentifiers :: Maybe AlternateIdentifiers
-, resource_relatedIdentifiers :: Maybe RelatedIdentifiers
 , resource_sizes :: Maybe Sizes
 , resource_formats :: Maybe Formats
 , resource_version :: Maybe Xsd.XsdString
@@ -57,6 +53,8 @@ type AttributesRows = (
 , publisher :: NonEmptyString
 , container :: Maybe Container
 , publicationYear :: Natural
+-- , relatedIdentifiers :: Array Identifier -- partial, see comments in Simple.purs
+, types :: Types
 )
 
 -- | Combines the Identifier and AlternateIdentifier properties from XML.
@@ -87,6 +85,12 @@ type ContainerRows = (
 )
 
 type Container = Record ContainerRows
+
+type TypeRows = (
+  -- TODO: fill in others
+  resourceTypeGeneral :: ResourceTypeGeneral
+)
+type Types = Record TypeRows
 
 type RelationshipsRows = (
 )
