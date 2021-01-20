@@ -28,7 +28,6 @@ type DataRows = (
   --  from IETF BCP 47, ISO 639-1 language codes.
   --  Currently just modeled as a string
 , resource_sizes :: Maybe Sizes
-, resource_formats :: Maybe Formats
 , resource_version :: Maybe Xsd.XsdString
 , resource_rightsList :: Maybe RightsList
 , resource_descriptions :: Maybe Descriptions
@@ -55,6 +54,7 @@ type AttributesRows = (
 , publicationYear :: Natural
 -- , relatedIdentifiers :: Array Identifier -- partial, see comments in Simple.purs
 , types :: Types
+, formats :: Array NonEmptyString -- Array Format
 )
 
 -- | Combines the Identifier and AlternateIdentifier properties from XML.
@@ -91,6 +91,11 @@ type TypeRows = (
   resourceTypeGeneral :: ResourceTypeGeneral
 )
 type Types = Record TypeRows
+
+-- type FormatRows = (
+--   format :: NonEmptyString
+-- )
+-- type Format = Record FormatRows
 
 type RelationshipsRows = (
 )

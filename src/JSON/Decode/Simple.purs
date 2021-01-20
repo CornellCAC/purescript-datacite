@@ -146,6 +146,11 @@ readRecordJSON' jsStr = do
   publisher <- readNEString
     (ctxt "data.attributes.publisher") recBase.data.attributes.publisher
   containerMay <- mkCont recBase.data.attributes.container
+  -- Note: apparently JSON doesn't match the format of the XML schema here
+  --       , so there is no nesting.
+  -- formats <- readArrayWith (ctxt "data.attributes.formats") readFormat
+  --   recBase.data.attributes.formats
+  formats <- traverse (readNEString (ctxt "Formats")) recBase.data.attributes.formats
   pure $ recBase { "data" {
       id = resId
     , "type" = idType
@@ -161,6 +166,7 @@ readRecordJSON' jsStr = do
       , container = containerMay
       , publicationYear = intToNat recBase.data.attributes.publicationYear
       -- , relatedIdentifiers = relIdents
+      , formats = formats
       }
     }}
   where
@@ -219,10 +225,11 @@ readNEArray ctxt f = do
     Nothing -> throwError $ pure $ Foreign.ForeignError $
       "Nonempty array expected in:\n" <> (force ctxt)
 
-readNEArrayWith :: forall a. Lazy String
+
+readArrayWith :: forall a. Lazy String
   -> (Lazy String -> Foreign -> JSONParse a) -> Foreign
-  -> JSONParse (NonEmptyArray a)
-readNEArrayWith ctxt read f = do
+  -> JSONParse (Array a)
+readArrayWith ctxt read f = do
   arrF <- readArray f
   -- Tuple jsonEi nfErrs = runWriter $ unwrap $ runExceptT $ unwrap jParse
   let arrTups = (read ctxt >>> unwrap >>> runExceptT >>> unwrap >>> runWriter)
@@ -231,7 +238,14 @@ readNEArrayWith ctxt read f = do
   let nfErrs = snd <$> arrTups
   traverse_ tell $ map toUnfoldable $ catLefts arrEis
   traverse_ tell nfErrs
-  let arr = catRights arrEis
+  pure $ catRights arrEis
+
+
+readNEArrayWith :: forall a. Lazy String
+  -> (Lazy String -> Foreign -> JSONParse a) -> Foreign
+  -> JSONParse (NonEmptyArray a)
+readNEArrayWith ctxt read f = do
+  arr <- readArrayWith ctxt read f
   case fromArray arr of
     Just nea -> pure nea
     Nothing -> throwError $ pure $ Foreign.ForeignError $
@@ -242,6 +256,12 @@ readTitle ctxt f = do
   titleF <- readProp "title" f
   title <- readNEString ctxt titleF
   pure $ {title: title}
+
+-- readFormat :: Lazy String -> Foreign -> JSONParse Format
+-- readFormat ctxt f = do
+--   formatF <- readProp "format" f
+--   format <- readNEString ctxt formatF
+--   pure $ {format: format}
 
 -- | Assigns Handle as the default identifier type in case
 -- | a document doesn't follow the schema.
