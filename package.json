@@ -10,8 +10,10 @@
   "author": "Brandon Barker <brandon.barker@gmail.com> (https://github.com/bbarker)",
   "license": "MPL-2.0",
   "devDependencies": {
+    "rimraf": "^3.0.2"
+  },
+  "optionalDevDependencies": {
     "purescript": "^0.13.8",
-    "rimraf": "^3.0.2",
     "spago": "^0.16.0"
   },
   "dependencies": {
