@@ -20,6 +20,16 @@ Tests use static copies of data obtained from DataCite, so they
 should periodically be checked against DataCite in case of a
 Schema update.
 
+## JSON differences from XML Schema
+
+This is likely an incomplete list.
+
+- The "formats" field is not nested like "formats->format" as it is
+  in XML, but is just an array named "formats".
+- DataCite JSON [has a container field](https://blog.datacite.org/introducing-datacite-json/)
+  that stores additional information about content location, but this
+  is just a convenience (i.e. redundancy) around existing fields).
+
 ## Publish
 
 > TODO

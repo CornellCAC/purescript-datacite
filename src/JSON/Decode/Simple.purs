@@ -167,6 +167,7 @@ readRecordJSON' jsStr = do
       , publicationYear = intToNat recBase.data.attributes.publicationYear
       -- , relatedIdentifiers = relIdents
       , formats = formats
+      -- ? resoureType? resourceTypeGeneral ?
       }
     }}
   where
