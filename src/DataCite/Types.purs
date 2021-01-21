@@ -24,7 +24,7 @@ type DataRows = (
 , resource_contributors :: Maybe Contributors
 , resource_dates :: Maybe Dates
 , resource_language :: Maybe String
-  -- ^ Primary language of the resource. Allowed values are taken 
+  -- ^ Primary language of the resource. Allowed values are taken
   --  from IETF BCP 47, ISO 639-1 language codes.
   --  Currently just modeled as a string
 , resource_sizes :: Maybe Sizes
@@ -55,6 +55,8 @@ type AttributesRows = (
 -- , relatedIdentifiers :: Array Identifier -- partial, see comments in Simple.purs
 , types :: Types
 , formats :: Array NonEmptyString -- Array Format
+, version :: Maybe String
+, descriptions :: Array Description
 )
 
 -- | Combines the Identifier and AlternateIdentifier properties from XML.
@@ -97,14 +99,20 @@ type Types = Record TypeRows
 -- )
 -- type Format = Record FormatRows
 
+type DescriptionRows = (
+  description :: String
+, descriptionType :: String -- TODO: refine
+)
+type Description = Record DescriptionRows
+
 type RelationshipsRows = (
 )
 
 type Relationships = Record RelationshipsRows
 
 
-{- 
--- | Uniquely identifies a creator or contributor, according to 
+{-
+-- | Uniquely identifies a creator or contributor, according to
 --   various identifier schemes.
 data NameIdentifier = NameIdentifier NonemptycontentStringType NameIdentifierAttributes deriving (Eq,Show)
 data NameIdentifierAttributes = NameIdentifierAttributes
