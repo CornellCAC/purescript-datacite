@@ -42,8 +42,17 @@ main = do
   log $ show $ jsonFiles
   runTest do
     suite "JSON functions" do
+      test "Can handle bad affjax response" testBadResponse
       test "Basic JSON success" $ traverse_ testJsonFile jsonFiles
 
+testBadResponse :: Test
+testBadResponse = do
+  let jsonResW = readRecordJSON respBody
+  let (Tuple jsonRes errs) = runWriter $ unwrap jsonResW
+  logNonFatals "NonFatal errors in parsing bad response" errs
+  assert "not isLeft on bad response" $ isLeft jsonRes
+  where
+    respBody = "{\"errors\":[{\"status\":\"404\",\"title\":\"The resource you are looking for doesn't exist.\"}]}"
 
 -- | Basic tests to see if parsing didn't fantastically fail.
 testJsonFile :: FilePath -> Test

@@ -1,5 +1,9 @@
 "use strict";
 
+let unsafeIsOk = function (val) {
+  return !( typeof val === 'undefined' || val === null );
+}
+
 exports.tryPrettyJson = function (jString) {
   var jsPretty = jString;
   return function() {
@@ -17,11 +21,16 @@ exports.tryPrettyJson = function (jString) {
 
 exports.preParse = function (jString) {
   var jsObj = JSON.parse(jString)
-  jsObj['data']['attributes']['xml'] = undefined;
-  var strOut = JSON.stringify(jsObj);
-  if (strOut === undefined || strOut === null) {
-    return "";
-  } else {
-    return strOut
-  }
+  if (unsafeIsOk(jsObj.data)
+      && unsafeIsOk(jsObj.data.attributes)
+      &&  unsafeIsOk(jsObj.data.attributes.xml)
+      ) {
+        jsObj['data']['attributes']['xml'] = undefined;
+        var strOut = JSON.stringify(jsObj);
+        if (strOut === undefined || strOut === null) {
+          return "";
+        } else {
+          return strOut
+        }
+      };
 };
